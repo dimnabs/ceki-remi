@@ -47,6 +47,7 @@
     this.sessionOver = false;
     this.gameOver = false;
     this.winner = null;
+    this.mustMeldCard = null; // kartu buangan yang wajib dijadikan meld
     this.sessionNo = 0;
     this.log = [];
     this.lastResult = null; // ringkasan skor sesi terakhir
@@ -87,6 +88,7 @@
     this.current = (typeof firstPlayer === 'number') ? firstPlayer : 0;
     this.phase = 'draw';
     this.turnCount = 0;
+    this.mustMeldCard = null;
     this._sortHand(this.players[0]);
     this._log('— Sesi ' + this.sessionNo + ' dimulai. ' +
       this.players[this.current].name + ' jalan pertama. —');
@@ -124,11 +126,21 @@
     return { ok: true, card: card };
   };
 
-  // Adakah 2 kartu di tangan yang membentuk meld valid bersama `card`?
-  Game.prototype._potentialMeldWith = function (hand, card) {
+  // Adakah 3-kartu meld yang SAH & boleh diturunkan SEKARANG memakai `card`
+  // (mempertimbangkan: meld pertama tanpa joker, dan set butuh seri lebih dulu)?
+  Game.prototype._canFormLegalMeldWith = function (player, card) {
+    var hand = player.hand;
+    var hasRun = player.melds.some(function (m) { return m.type === 'run'; });
+    var firstMeld = !player.hasLaidMeld;
     for (var i = 0; i < hand.length; i++) {
       for (var j = i + 1; j < hand.length; j++) {
-        if (Melds.isValidMeld([card, hand[i], hand[j]])) return true;
+        var group = [card, hand[i], hand[j]];
+        if (!Melds.isValidMeld(group)) continue;
+        var type = Melds.meldType(group);
+        var hasJoker = group.some(function (c) { return c.joker; });
+        if (firstMeld && hasJoker) continue;     // meld pertama tanpa joker
+        if (type === 'set' && !hasRun) continue; // set butuh seri lebih dulu
+        return true;
       }
     }
     return false;
@@ -141,10 +153,11 @@
     if (depth > this.discard.length) return false;
     // Kartu yang "diinginkan" adalah yang terdalam dari yang diambil.
     var wanted = this.discard[this.discard.length - depth];
-    return this._potentialMeldWith(this.currentPlayer().hand, wanted);
+    return this._canFormLegalMeldWith(this.currentPlayer(), wanted);
   };
 
   // Ambil `depth` kartu teratas dari buangan (kartu diinginkan + semua di atasnya).
+  // Kartu yang diinginkan WAJIB diturunkan sebagai bagian meld pada giliran ini.
   Game.prototype.takeDiscard = function (depth) {
     depth = depth || 1;
     if (this.phase !== 'draw') return { ok: false, reason: 'Bukan fase ambil.' };
@@ -153,13 +166,15 @@
     if (depth > this.discard.length) return { ok: false, reason: 'Tidak sebanyak itu di buangan.' };
     var wanted = this.discard[this.discard.length - depth];
     var p = this.currentPlayer();
-    if (!this._potentialMeldWith(p.hand, wanted)) {
+    if (!this._canFormLegalMeldWith(p, wanted)) {
       return { ok: false, reason: 'Butuh 2 kartu di tangan yang bisa jadi meld dengan ' + Deck.cardLabel(wanted) + '.' };
     }
     var taken = this.discard.splice(this.discard.length - depth, depth);
     for (var k = 0; k < taken.length; k++) p.hand.push(taken[k]);
     this._sortHand(p);
     this.phase = 'act';
+    // Kartu ini wajib menjadi bagian meld sebelum boleh membuang.
+    this.mustMeldCard = wanted;
     this._log(p.name + ' mengambil ' + taken.length + ' kartu dari buangan (' +
       taken.map(Deck.cardLabel).join(' ') + ').');
     return { ok: true, cards: taken };
@@ -181,6 +196,11 @@
     if (!p.hasLaidMeld && hasJoker) {
       return { ok: false, reason: 'Meld pertama tidak boleh memakai joker.' };
     }
+    // Aturan: set hanya boleh setelah pemain menurunkan minimal satu seri.
+    if (type === 'set') {
+      var hasRun = p.melds.some(function (m) { return m.type === 'run'; });
+      if (!hasRun) return { ok: false, reason: 'Set hanya boleh setelah menurunkan seri (urut) lebih dulu.' };
+    }
     // Pindahkan kartu dari tangan ke meld.
     for (var k = 0; k < cards.length; k++) {
       p.hand.splice(p.hand.indexOf(cards[k]), 1);
@@ -188,6 +208,10 @@
     var points = Melds.meldPoints(cards);
     p.melds.push({ cards: cards.slice(), type: type, points: points });
     p.hasLaidMeld = true;
+    // Bila meld ini memuat kartu wajib dari buangan, kewajiban terpenuhi.
+    if (this.mustMeldCard && cards.indexOf(this.mustMeldCard) !== -1) {
+      this.mustMeldCard = null;
+    }
     this._log(p.name + ' menurunkan ' + (type === 'set' ? 'set' : 'seri') +
       ' (' + cards.map(Deck.cardLabel).join(' ') + ') +' + points);
     return { ok: true, type: type, points: points };
@@ -199,6 +223,10 @@
     var p = this.currentPlayer();
     if (p.hand.indexOf(card) === -1) return { ok: false, reason: 'Kartu tidak di tangan.' };
     if (card.joker) return { ok: false, reason: 'Joker tidak boleh dibuang.' };
+    // Aturan: kartu yang diambil dari buangan wajib diturunkan sebagai meld dulu.
+    if (this.mustMeldCard) {
+      return { ok: false, reason: 'Turunkan dulu meld yang memuat ' + Deck.cardLabel(this.mustMeldCard) + ' (kartu dari buangan).' };
+    }
     p.hand.splice(p.hand.indexOf(card), 1);
     this.discard.push(card);
     this._log(p.name + ' membuang ' + Deck.cardLabel(card) + '.');
@@ -218,6 +246,7 @@
     if (this.turnCount >= this.maxTurns) { this._endSessionDeckEmpty(); return; }
     this.current = (this.current + 1) % this.players.length;
     this.phase = 'draw';
+    this.mustMeldCard = null;
     // Aturan: bila deck sudah habis, sesi berakhir.
     if (this.deck.length === 0) { this._endSessionDeckEmpty(); }
   };
