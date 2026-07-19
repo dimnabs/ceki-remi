@@ -179,6 +179,7 @@
     me.hand.forEach(function (card) {
       var el = cardEl(card);
       if (selected[card.id]) el.classList.add('selected');
+      if (game.mustMeldCard === card) el.classList.add('must');
       if (!interactive) el.classList.add('disabled');
       else el.addEventListener('click', function () { toggleSelect(card); });
       hand.appendChild(el);
@@ -194,11 +195,15 @@
     $('btn-draw-deck').disabled = !drawPhase;
     $('btn-take-discard').disabled = !drawPhase || !game.canTakeDiscard(1);
     $('btn-lay').disabled = !actPhase || sel.length < 3;
-    $('btn-discard').disabled = !actPhase || sel.length !== 1 || sel[0].joker;
+    $('btn-discard').disabled = !actPhase || sel.length !== 1 || sel[0].joker || !!game.mustMeldCard;
 
     var hint = $('hint');
     hint.className = 'hint';
-    if (actPhase) {
+    if (actPhase && game.mustMeldCard) {
+      hint.textContent = 'Kartu ' + Deck.cardLabel(game.mustMeldCard) +
+        ' dari buangan wajib kamu turunkan sebagai meld dulu.';
+      hint.className = 'hint warn';
+    } else if (actPhase) {
       if (sel.length === 0) hint.textContent = 'Pilih 3+ kartu untuk meld, atau 1 kartu untuk dibuang.';
       else if (sel.length === 1) hint.textContent = sel[0].joker ? 'Joker tak boleh dibuang.' : 'Tekan "Buang Kartu".';
       else {

@@ -172,6 +172,12 @@ body {
 .hand .card { cursor: pointer; transition: transform .12s, box-shadow .12s; }
 .hand .card:hover { transform: translateY(-6px); }
 .hand .card.selected { transform: translateY(-12px); box-shadow: 0 0 0 3px var(--accent), var(--shadow); }
+.hand .card.must { box-shadow: 0 0 0 3px var(--danger), var(--shadow); }
+.hand .card.must::after {
+  content: "wajib"; position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  background: var(--danger); color: #2a0000; font-size: 9px; font-weight: 800;
+  padding: 1px 5px; border-radius: 6px; letter-spacing: .5px;
+}
 .hand .card.disabled { cursor: default; opacity: .55; }
 .hand .card.disabled:hover { transform: none; }
 
