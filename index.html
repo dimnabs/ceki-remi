@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ceki — Remi 7 Kartu</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">♠♥♣♦</span>
+      <h1>Ceki <small>Remi 7 Kartu</small></h1>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-speed" class="ghost-btn" type="button">⏩ Cepat: Off</button>
+      <button id="btn-rules" class="ghost-btn" type="button">Aturan</button>
+      <button id="btn-restart" class="ghost-btn" type="button">Main Baru</button>
+    </div>
+  </header>
+
+  <div id="scoreboard" class="scoreboard"><!-- diisi JS --></div>
+
+  <main class="table-area">
+    <section class="opponents" id="opponents"><!-- 3 bot, diisi JS --></section>
+
+    <section class="center">
+      <div class="pile-group">
+        <div class="pile" id="deck-pile" title="Ambil dari deck">
+          <div class="card card-back"><span>CEKI</span></div>
+          <div class="pile-count" id="deck-count">52</div>
+          <div class="pile-label">Deck</div>
+        </div>
+        <div class="pile" id="discard-pile" title="Ambil dari buangan">
+          <div id="discard-top"><!-- kartu teratas --></div>
+          <div class="pile-label">Buangan</div>
+        </div>
+      </div>
+      <div class="turn-banner" id="turn-banner">Menyiapkan permainan…</div>
+    </section>
+
+    <section class="me" id="me">
+      <div class="me-header">
+        <span class="me-name" id="me-name">Kamu</span>
+        <span class="me-melds-inline" id="me-melds-inline"></span>
+      </div>
+      <div class="hand" id="hand"><!-- kartu tangan pemain, diisi JS --></div>
+      <div class="controls" id="controls">
+        <button id="btn-draw-deck" class="act-btn" type="button">Ambil Deck</button>
+        <button id="btn-take-discard" class="act-btn" type="button">Ambil Buangan</button>
+        <button id="btn-lay" class="act-btn primary" type="button">Turunkan Meld</button>
+        <button id="btn-discard" class="act-btn" type="button">Buang Kartu</button>
+        <span class="hint" id="hint"></span>
+      </div>
+    </section>
+  </main>
+
+  <aside class="logbox">
+    <h2>Riwayat</h2>
+    <ul id="log"></ul>
+  </aside>
+
+  <!-- Modal hasil sesi / game over -->
+  <div class="modal-overlay hidden" id="modal">
+    <div class="modal">
+      <h2 id="modal-title">Hasil Sesi</h2>
+      <div id="modal-body"></div>
+      <button id="modal-btn" class="act-btn primary" type="button">Lanjut</button>
+    </div>
+  </div>
+
+  <!-- Modal aturan -->
+  <div class="modal-overlay hidden" id="rules-modal">
+    <div class="modal rules">
+      <h2>Aturan Singkat</h2>
+      <div class="rules-body">
+        <p><strong>Tujuan:</strong> kumpulkan poin terbanyak. Pemenang = pemain pertama yang total skornya mencapai <strong>500</strong> (aturan rumah; makalah aslinya 1000).</p>
+        <p><strong>Giliranmu:</strong></p>
+        <ol>
+          <li><strong>Ambil</strong> 1 kartu — dari <em>Deck</em> atau <em>Buangan</em>.</li>
+          <li><strong>Turunkan</strong> kombinasi "jadi" (opsional): pilih kartu lalu tekan <em>Turunkan Meld</em>.</li>
+          <li><strong>Buang</strong> 1 kartu untuk mengakhiri giliran.</li>
+        </ol>
+        <p><strong>Kombinasi (min. 3 kartu):</strong></p>
+        <ul>
+          <li><strong>Set</strong> — rank sama, simbol beda (mis. 8♠ 8♥ 8♦).</li>
+          <li><strong>Seri</strong> — berurutan, simbol sama (mis. 4♣ 5♣ 6♣). Melingkar K-A-2 boleh.</li>
+        </ul>
+        <p><strong>Nilai:</strong> 2–10 = 5 · J/Q/K = 10 · As = 15. Kartu jadi → plus, sisa di tangan → minus.</p>
+        <p><strong>Joker:</strong> pengganti kartu apa pun. Tak boleh untuk meld pertamamu, tak boleh dibuang, dan bila tersisa di tangan saat sesi berakhir → <strong>−500</strong>.</p>
+        <p><strong>Tutup tangan:</strong> habiskan seluruh kartu (semua jadi, sisa satu dibuang) → bonus <strong>+250</strong> (atau +500 bila memakai joker).</p>
+        <p><strong>Akhir sesi:</strong> saat ada yang tutup tangan. Bila deck habis, tumpukan buangan dikocok ulang jadi deck baru (maksimal 2×); setelah itu sesi berakhir dan skor dihitung.</p>
+      </div>
+      <button id="rules-close" class="act-btn primary" type="button">Mengerti</button>
+    </div>
+  </div>
+
+  <script src="js/deck.js"></script>
+  <script src="js/melds.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
