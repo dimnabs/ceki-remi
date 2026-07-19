@@ -2,12 +2,15 @@
  * game.js — Mesin aturan Remi 7 Kartu / Ceki.
  *
  * Alur giliran:
- *   1. AMBIL  : dari deck atau dari puncak tumpukan buangan.
+ *   1. AMBIL  : dari deck, ATAU dari tumpukan buangan — boleh mengambil kartu
+ *               yang diinginkan (maksimal 7 kartu dari atas) beserta semua
+ *               kartu di atasnya, dengan syarat pemain punya >= 2 kartu di
+ *               tangan yang bisa membentuk meld dengan kartu itu.
  *   2. TURUNKAN (opsional): letakkan meld (set/seri) >= 3 kartu.
  *   3. BUANG  : buang 1 kartu ke tumpukan buangan.
  *
  * Sesi berakhir bila deck habis atau ada pemain "tutup tangan" (hand kosong
- * setelah membuang). Skor diakumulasi antar-sesi hingga ada total > 1000.
+ * setelah membuang). Skor diakumulasi antar-sesi hingga ada yang capai target.
  */
 (function (global) {
   'use strict';
@@ -48,11 +51,11 @@
     this.log = [];
     this.lastResult = null; // ringkasan skor sesi terakhir
     this.turnCount = 0;
-    this.maxTurns = opts.maxTurns || 120;   // safety agar sesi selalu berujung
-    // Berapa kali tumpukan buangan boleh dikocok ulang jadi deck saat deck habis.
-    // Memberi kesempatan "tutup tangan" tanpa membuat ronde kepanjangan.
-    this.maxReshuffles = (opts.maxReshuffles != null) ? opts.maxReshuffles : 2;
-    this.reshuffles = 0;
+    // Safety agar sesi selalu berujung meski (secara teori) pemain terus
+    // mengambil dari buangan. Dalam praktik sesi berakhir jauh lebih dulu saat
+    // deck habis. Nilai besar agar tidak mengganggu permainan normal.
+    this.maxTurns = opts.maxTurns || 400;
+    this.maxDiscardTake = opts.maxDiscardTake || 7; // maks kartu diambil dari buangan
     this.targetScore = opts.targetScore || TARGET_SCORE;
   }
 
@@ -84,7 +87,6 @@
     this.current = (typeof firstPlayer === 'number') ? firstPlayer : 0;
     this.phase = 'draw';
     this.turnCount = 0;
-    this.reshuffles = 0;
     this._sortHand(this.players[0]);
     this._log('— Sesi ' + this.sessionNo + ' dimulai. ' +
       this.players[this.current].name + ' jalan pertama. —');
@@ -106,23 +108,10 @@
     return this.discard.length ? this.discard[this.discard.length - 1] : null;
   };
 
-  // Isi ulang deck dari tumpukan buangan (sisakan kartu teratas).
-  // Mengembalikan false bila tidak cukup kartu untuk diisi ulang.
-  Game.prototype._replenishDeck = function () {
-    if (this.reshuffles >= this.maxReshuffles) return false;
-    if (this.discard.length <= 1) return false;
-    var top = this.discard.pop();
-    this.deck = Deck.shuffle(this.discard, this.rng);
-    this.discard = [top];
-    this.reshuffles++;
-    this._log('Deck habis — tumpukan buangan dikocok ulang menjadi deck baru.');
-    return true;
-  };
-
   // ---- AMBIL ----
   Game.prototype.drawFromDeck = function () {
     if (this.phase !== 'draw') return { ok: false, reason: 'Bukan fase ambil.' };
-    if (this.deck.length === 0 && !this._replenishDeck()) {
+    if (this.deck.length === 0) {
       this._endSessionDeckEmpty();
       return { ok: false, reason: 'deck-habis' };
     }
@@ -135,16 +124,45 @@
     return { ok: true, card: card };
   };
 
-  Game.prototype.takeDiscard = function () {
+  // Adakah 2 kartu di tangan yang membentuk meld valid bersama `card`?
+  Game.prototype._potentialMeldWith = function (hand, card) {
+    for (var i = 0; i < hand.length; i++) {
+      for (var j = i + 1; j < hand.length; j++) {
+        if (Melds.isValidMeld([card, hand[i], hand[j]])) return true;
+      }
+    }
+    return false;
+  };
+
+  // Bolehkah mengambil `depth` kartu teratas dari buangan? (syarat aturan)
+  Game.prototype.canTakeDiscard = function (depth) {
+    if (this.phase !== 'draw') return false;
+    if (depth < 1 || depth > this.maxDiscardTake) return false;
+    if (depth > this.discard.length) return false;
+    // Kartu yang "diinginkan" adalah yang terdalam dari yang diambil.
+    var wanted = this.discard[this.discard.length - depth];
+    return this._potentialMeldWith(this.currentPlayer().hand, wanted);
+  };
+
+  // Ambil `depth` kartu teratas dari buangan (kartu diinginkan + semua di atasnya).
+  Game.prototype.takeDiscard = function (depth) {
+    depth = depth || 1;
     if (this.phase !== 'draw') return { ok: false, reason: 'Bukan fase ambil.' };
     if (this.discard.length === 0) return { ok: false, reason: 'Tumpukan buangan kosong.' };
+    if (depth > this.maxDiscardTake) return { ok: false, reason: 'Maksimal ' + this.maxDiscardTake + ' kartu dari atas.' };
+    if (depth > this.discard.length) return { ok: false, reason: 'Tidak sebanyak itu di buangan.' };
+    var wanted = this.discard[this.discard.length - depth];
     var p = this.currentPlayer();
-    var card = this.discard.pop();
-    p.hand.push(card);
+    if (!this._potentialMeldWith(p.hand, wanted)) {
+      return { ok: false, reason: 'Butuh 2 kartu di tangan yang bisa jadi meld dengan ' + Deck.cardLabel(wanted) + '.' };
+    }
+    var taken = this.discard.splice(this.discard.length - depth, depth);
+    for (var k = 0; k < taken.length; k++) p.hand.push(taken[k]);
     this._sortHand(p);
     this.phase = 'act';
-    this._log(p.name + ' mengambil ' + Deck.cardLabel(card) + ' dari buangan.');
-    return { ok: true, card: card };
+    this._log(p.name + ' mengambil ' + taken.length + ' kartu dari buangan (' +
+      taken.map(Deck.cardLabel).join(' ') + ').');
+    return { ok: true, cards: taken };
   };
 
   // ---- TURUNKAN MELD ----
@@ -196,12 +214,12 @@
 
   Game.prototype._nextTurn = function () {
     this.turnCount++;
-    // Safety: sesi yang terlalu panjang diakhiri seperti deck habis.
+    // Safety: sesi yang (secara teori) tak berujung diakhiri seperti deck habis.
     if (this.turnCount >= this.maxTurns) { this._endSessionDeckEmpty(); return; }
     this.current = (this.current + 1) % this.players.length;
     this.phase = 'draw';
-    // Jika deck & buangan tak bisa lagi menyediakan kartu, akhiri sesi.
-    if (this.deck.length === 0 && this.discard.length <= 1) { this._endSessionDeckEmpty(); }
+    // Aturan: bila deck sudah habis, sesi berakhir.
+    if (this.deck.length === 0) { this._endSessionDeckEmpty(); }
   };
 
   // ---- AKHIR SESI ----

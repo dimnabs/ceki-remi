@@ -236,6 +236,32 @@ body {
 .result-table tr.winner td { color: var(--accent); font-weight: 700; }
 .result-table tr.closer td:first-child::after { content: " ★"; color: var(--accent); }
 
+/* Setup modal */
+.target-options { display: flex; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+.target-options button {
+  flex: 1; min-width: 90px;
+  background: rgba(255,255,255,.08); color: var(--ink);
+  border: 1px solid rgba(255,255,255,.2); border-radius: 10px;
+  padding: 14px 10px; font-size: 20px; font-weight: 700; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.target-options button small { display: block; font-size: 11px; font-weight: 400; color: var(--ink-dim); }
+.target-options button:hover { background: rgba(255,255,255,.16); }
+.target-options button.active { border-color: var(--accent); background: rgba(231,198,107,.18); box-shadow: 0 0 0 1px var(--accent); }
+.custom-target-label { display: block; font-size: 14px; color: var(--ink-dim); margin-bottom: 4px; }
+.custom-target-label input {
+  width: 120px; margin-left: 8px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.25); color: var(--ink); font-size: 15px;
+}
+.setup-note { font-size: 12px; color: var(--ink-dim); margin: 12px 0 16px; }
+
+/* Discard fan */
+#discard-top { display: flex; align-items: flex-start; max-width: 100%; overflow-x: auto; padding-top: 8px; }
+#discard-top .card { flex: 0 0 auto; }
+.card.takeable { cursor: pointer; outline: 2px solid var(--accent); outline-offset: 1px; transition: transform .1s; }
+.card.takeable:hover { transform: translateY(-8px); z-index: 5; }
+.card.dim { filter: brightness(.62) saturate(.7); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
   body {

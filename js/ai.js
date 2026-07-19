@@ -14,19 +14,35 @@
   var Deck = global.Deck || (typeof require !== 'undefined' ? require('./deck.js') : null);
   var Melds = global.Melds || (typeof require !== 'undefined' ? require('./melds.js') : null);
 
-  function bestPoints(cards) {
-    return Melds.findBestMelds(cards).meldPoints;
+  function deadwoodValue(cards) {
+    var dv = 0;
+    for (var i = 0; i < cards.length; i++) dv += cards[i].joker ? 500 : cards[i].value;
+    return dv;
   }
 
-  // Keputusan fase AMBIL: 'discard' atau 'deck'.
+  // Skor tangan = poin meld terbaik dikurangi nilai kartu sisa (deadwood).
+  // Dipakai agar bot tak serakah mengambil banyak kartu buangan yang jadi sampah.
+  function handScore(cards) {
+    var fb = Melds.findBestMelds(cards);
+    return fb.meldPoints - deadwoodValue(fb.deadwood);
+  }
+
+  // Keputusan fase AMBIL. Mengembalikan { source:'deck' } atau
+  // { source:'discard', depth:N } — memilih kedalaman terbaik dari buangan.
   function decideDraw(game) {
-    var top = game.topDiscard();
-    if (!top) return 'deck';
     var p = game.currentPlayer();
-    var base = bestPoints(p.hand);
-    var withCard = bestPoints(p.hand.concat([top]));
-    // Ambil dari buangan bila kartu itu menambah potensi poin meld.
-    return withCard > base ? 'discard' : 'deck';
+    var base = handScore(p.hand);
+    var len = game.discard.length;
+    var maxD = Math.min(game.maxDiscardTake, len);
+    var best = { gain: 0, depth: 0 };
+    for (var d = 1; d <= maxD; d++) {
+      if (!game.canTakeDiscard(d)) continue;
+      var taken = game.discard.slice(len - d);
+      var gain = handScore(p.hand.concat(taken)) - base;
+      if (gain > best.gain) best = { gain: gain, depth: d };
+    }
+    // Ambil dari buangan hanya bila benar-benar meningkatkan nilai tangan.
+    return best.depth > 0 ? { source: 'discard', depth: best.depth } : { source: 'deck' };
   }
 
   /*

@@ -115,14 +115,41 @@
     deckPile.classList.toggle('selectable', isHumanDraw);
     deckPile.classList.toggle('disabled', !isHumanDraw);
 
-    var top = game.topDiscard();
-    var discTop = $('discard-top');
-    discTop.innerHTML = '';
-    if (top) discTop.appendChild(cardEl(top));
-    else discTop.innerHTML = '<div class="card card-back" style="opacity:.3"></div>';
-    var canTake = isHumanDraw && !!top;
-    discPile.classList.toggle('selectable', canTake);
-    discPile.classList.toggle('disabled', !canTake);
+    // Kipas buangan: tampilkan hingga 7 kartu teratas. Kartu yang memenuhi
+    // syarat pengambilan dapat diklik (mengambil kartu itu + semua di atasnya).
+    var discFan = $('discard-top');
+    discFan.innerHTML = '';
+    var len = game.discard.length;
+    if (len === 0) {
+      discFan.innerHTML = '<div class="card card-back" style="opacity:.25"></div>';
+      discPile.classList.remove('selectable');
+      discPile.classList.add('disabled');
+    } else {
+      var maxShow = Math.min(game.maxDiscardTake, len);
+      var start = len - maxShow;
+      var anyTakeable = false;
+      for (var w = start; w < len; w++) {
+        var depth = len - w; // 1 = teratas
+        var card = game.discard[w];
+        var el = cardEl(card);
+        if (w !== start) el.style.marginLeft = '-22px';
+        var takeable = isHumanDraw && game.canTakeDiscard(depth);
+        if (takeable) {
+          anyTakeable = true;
+          el.classList.add('takeable');
+          el.title = 'Ambil ' + depth + ' kartu';
+          (function (dp) {
+            el.addEventListener('click', function (e) { e.stopPropagation(); onTakeDiscardDepth(dp); });
+          })(depth);
+        } else if (isHumanDraw) {
+          el.classList.add('dim');
+          el.title = 'Belum bisa diambil (butuh 2 kartu pembentuk meld)';
+        }
+        discFan.appendChild(el);
+      }
+      discPile.classList.toggle('selectable', anyTakeable);
+      discPile.classList.toggle('disabled', isHumanDraw && !anyTakeable);
+    }
 
     var banner = $('turn-banner');
     if (game.sessionOver) {
@@ -165,7 +192,7 @@
     var sel = selectedCards();
 
     $('btn-draw-deck').disabled = !drawPhase;
-    $('btn-take-discard').disabled = !drawPhase || !game.topDiscard();
+    $('btn-take-discard').disabled = !drawPhase || !game.canTakeDiscard(1);
     $('btn-lay').disabled = !actPhase || sel.length < 3;
     $('btn-discard').disabled = !actPhase || sel.length !== 1 || sel[0].joker;
 
@@ -180,7 +207,9 @@
         else { hint.textContent = 'Pilihan bukan set/seri valid.'; hint.className = 'hint warn'; }
       }
     } else if (drawPhase) {
-      hint.textContent = '';
+      hint.textContent = game.discard.length
+        ? 'Klik kartu buangan untuk ambil kartu itu + semua di atasnya (butuh 2 kartu pembentuk meld).'
+        : 'Ambil kartu dari deck.';
     } else {
       hint.textContent = '';
     }
@@ -217,9 +246,13 @@
     render();
   }
   function onTakeDiscard() {
+    onTakeDiscardDepth(1); // tombol = ambil kartu teratas
+  }
+  function onTakeDiscardDepth(depth) {
     if (busy || game.current !== 0 || game.phase !== 'draw') return;
-    var r = game.takeDiscard();
+    var r = game.takeDiscard(depth);
     if (r.ok) { drewThisTurn = true; clearSelection(); render(); }
+    else flashHint(r.reason);
   }
   function onLay() {
     if (busy || game.current !== 0 || game.phase !== 'act') return;
@@ -270,7 +303,7 @@
     await sleep(SPEED.draw);
     // 1) Ambil
     var choice = AI.decideDraw(game);
-    if (choice === 'discard') game.takeDiscard(); else game.drawFromDeck();
+    if (choice.source === 'discard') game.takeDiscard(choice.depth); else game.drawFromDeck();
     render();
     if (game.sessionOver) return;
     await sleep(SPEED.act);
@@ -331,7 +364,7 @@
 
   function onModalBtn() {
     $('modal').classList.add('hidden');
-    if (game.gameOver) { newGame(); return; }
+    if (game.gameOver) { showSetup(); return; }
     var starter = game.nextSessionStarter();
     game.startSession(starter);
     clearSelection();
@@ -340,13 +373,52 @@
   }
 
   // ---------- Bootstrap ----------
-  function newGame() {
-    game = new Game(['Kamu', 'Bot Ani', 'Bot Budi', 'Bot Citra']);
+  var chosenTarget = 500;
+
+  function newGame(targetScore) {
+    game = new Game(['Kamu', 'Bot Ani', 'Bot Budi', 'Bot Citra'],
+      { targetScore: targetScore || chosenTarget });
     game.startSession(0);
     clearSelection();
     busy = false;
     render();
     if (game.current !== 0) runBots();
+  }
+
+  function showSetup() {
+    $('modal').classList.add('hidden');
+    $('setup-modal').classList.remove('hidden');
+  }
+
+  function markTargetPreset(value) {
+    var btns = document.querySelectorAll('#target-options button');
+    btns.forEach(function (b) {
+      b.classList.toggle('active', parseInt(b.dataset.target, 10) === value);
+    });
+  }
+
+  function bindSetup() {
+    var opts = document.querySelectorAll('#target-options button');
+    opts.forEach(function (b) {
+      b.addEventListener('click', function () {
+        chosenTarget = parseInt(b.dataset.target, 10);
+        $('custom-target').value = '';
+        markTargetPreset(chosenTarget);
+      });
+    });
+    $('custom-target').addEventListener('input', function () {
+      var v = parseInt(this.value, 10);
+      if (!isNaN(v) && v > 0) { chosenTarget = v; markTargetPreset(-1); }
+    });
+    $('setup-start').addEventListener('click', function () {
+      var custom = parseInt($('custom-target').value, 10);
+      var target = (!isNaN(custom) && custom >= 50) ? custom : chosenTarget;
+      if (!target || target < 50) target = 500;
+      chosenTarget = target;
+      $('setup-modal').classList.add('hidden');
+      newGame(target);
+    });
+    markTargetPreset(chosenTarget); // sorot default 500
   }
 
   function bindEvents() {
@@ -356,7 +428,7 @@
     $('btn-discard').addEventListener('click', onDiscard);
     $('modal-btn').addEventListener('click', onModalBtn);
     $('btn-restart').addEventListener('click', function () {
-      $('modal').classList.add('hidden'); newGame();
+      $('modal').classList.add('hidden'); showSetup();
     });
     $('deck-pile').addEventListener('click', onDrawDeck);
     $('discard-pile').addEventListener('click', onTakeDiscard);
@@ -371,6 +443,7 @@
 
   window.addEventListener('DOMContentLoaded', function () {
     bindEvents();
-    newGame();
+    bindSetup();
+    // Setup modal tampil sejak awal (tidak hidden di HTML); tunggu pemain memilih.
   });
 })();

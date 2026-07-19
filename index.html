@@ -69,6 +69,25 @@
     </div>
   </div>
 
+  <!-- Modal setup awal: pilih target skor -->
+  <div class="modal-overlay" id="setup-modal">
+    <div class="modal">
+      <h2>♠♥ Ceki — Remi 7 Kartu</h2>
+      <p>Pilih target skor untuk memenangkan permainan:</p>
+      <div class="target-options" id="target-options">
+        <button type="button" data-target="300">300</button>
+        <button type="button" data-target="500">500</button>
+        <button type="button" data-target="1000">1000 <small>(aturan asli)</small></button>
+      </div>
+      <label class="custom-target-label">
+        Atau tentukan sendiri:
+        <input id="custom-target" type="number" min="50" step="50" placeholder="mis. 750">
+      </label>
+      <p class="setup-note">Permainan bisa berlangsung lama — skor diakumulasi tiap ronde sampai ada yang mencapai target.</p>
+      <button id="setup-start" class="act-btn primary" type="button">Mulai Bermain</button>
+    </div>
+  </div>
+
   <!-- Modal aturan -->
   <div class="modal-overlay hidden" id="rules-modal">
     <div class="modal rules">

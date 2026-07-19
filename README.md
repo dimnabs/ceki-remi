@@ -25,8 +25,12 @@ python3 -m http.server 8000   # lalu buka http://localhost:8000
 
 Setiap pemain mendapat **7 kartu**. Pada giliranmu:
 
-1. **Ambil** satu kartu — dari **Deck** atau dari **Buangan** (klik tumpukannya
-   atau tombolnya).
+1. **Ambil** kartu — dari **Deck**, atau dari **Buangan**. Dari buangan kamu
+   boleh mengambil kartu yang diinginkan (maksimal **7 kartu** dari atas)
+   **beserta semua kartu di atasnya**, dengan syarat kamu punya **≥2 kartu di
+   tangan** yang bisa membentuk meld dengan kartu itu. Klik kartu di kipas
+   buangan untuk mengambil dari sana; kartu yang belum memenuhi syarat tampak
+   redup.
 2. **Turunkan meld** (opsional) — pilih 3+ kartu di tanganmu lalu tekan
    *Turunkan Meld*.
 3. **Buang** satu kartu untuk mengakhiri giliran (pilih 1 kartu → *Buang Kartu*).
@@ -61,11 +65,13 @@ Habiskan seluruh kartu (semua jadi, sisa satu dibuang) → **bonus +250**
 
 ### Akhir sesi & pemenang
 
-Sesi berakhir saat ada yang tutup tangan. Bila deck habis, tumpukan buangan
-dikocok ulang menjadi deck baru (maksimal 2×), lalu sesi berakhir dan skor
-dihitung. Skor diakumulasi antar-sesi. **Pemenang** = pemain pertama yang total
-skornya mencapai **500** (aturan rumah agar cepat; makalah aslinya 1000 —
-lihat `opts.targetScore`).
+Sesi berakhir saat ada yang **tutup tangan** atau saat **deck habis** — lalu
+skor dihitung. Skor diakumulasi antar-sesi. **Pemenang** = pemain pertama yang
+total skornya mencapai **target**.
+
+Target skor dipilih di layar awal: **300**, **500**, **1000** (aturan asli
+makalah), atau nilai custom. Semakin tinggi target, semakin banyak ronde yang
+dimainkan — permainan ini memang biasa dimainkan lama.
 
 ## Strategi Bot (Greedy)
 
@@ -92,13 +98,12 @@ js/ui.js        # render DOM, interaksi pemain, animasi giliran bot
 Modul `deck.js`, `melds.js`, `game.js`, dan `ai.js` juga bisa dipakai di Node.js
 (mendukung `module.exports`) untuk pengujian atau simulasi headless.
 
-## Catatan Penyederhanaan
+## Catatan
 
-- Pengambilan dari buangan disederhanakan menjadi **kartu teratas saja**
-  (aturan asli membolehkan mengambil beberapa kartu dari tumpukan buangan
-  dengan syarat tertentu).
-- Deck dikocok ulang dari buangan agar sesi berpeluang ditutup, dengan batas
-  untuk menjaga durasi permainan tetap wajar.
+- Deck **tidak** dikocok ulang: bila deck habis, sesi berakhir (aturan asli).
+- Ada batas aman `maxTurns` yang sangat besar sekadar untuk mencegah kemacetan
+  teoretis; dalam permainan normal sesi berakhir jauh sebelum itu (deck habis
+  di sekitar ~27 giliran).
 
 Aturan Ceki berbeda-beda antar daerah — versi ini mengambil dasar dari kedua
 sumber di atas.
