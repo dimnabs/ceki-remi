@@ -151,9 +151,13 @@
     if (this.phase !== 'draw') return false;
     if (depth < 1 || depth > this.maxDiscardTake) return false;
     if (depth > this.discard.length) return false;
+    var p = this.currentPlayer();
+    // Setelah wajib-meld (>=3 kartu) harus tetap ada >=1 kartu untuk dibuang.
+    // Jadi total kartu setelah mengambil minimal 4 (3 untuk meld + 1 buangan).
+    if (p.hand.length + depth < 4) return false;
     // Kartu yang "diinginkan" adalah yang terdalam dari yang diambil.
     var wanted = this.discard[this.discard.length - depth];
-    return this._canFormLegalMeldWith(this.currentPlayer(), wanted);
+    return this._canFormLegalMeldWith(p, wanted);
   };
 
   // Ambil `depth` kartu teratas dari buangan (kartu diinginkan + semua di atasnya).
@@ -166,6 +170,9 @@
     if (depth > this.discard.length) return { ok: false, reason: 'Tidak sebanyak itu di buangan.' };
     var wanted = this.discard[this.discard.length - depth];
     var p = this.currentPlayer();
+    if (p.hand.length + depth < 4) {
+      return { ok: false, reason: 'Kartu tak cukup — setelah menurunkan meld harus tersisa 1 kartu untuk dibuang.' };
+    }
     if (!this._canFormLegalMeldWith(p, wanted)) {
       return { ok: false, reason: 'Butuh 2 kartu di tangan yang bisa jadi meld dengan ' + Deck.cardLabel(wanted) + '.' };
     }
@@ -201,6 +208,10 @@
       var hasRun = p.melds.some(function (m) { return m.type === 'run'; });
       if (!hasRun) return { ok: false, reason: 'Set hanya boleh setelah menurunkan seri (urut) lebih dulu.' };
     }
+    // Aturan: tiap giliran wajib membuang 1 kartu — jangan turunkan kartu terakhir.
+    if (p.hand.length - cards.length < 1) {
+      return { ok: false, reason: 'Sisakan minimal 1 kartu untuk dibuang.' };
+    }
     // Pindahkan kartu dari tangan ke meld.
     for (var k = 0; k < cards.length; k++) {
       p.hand.splice(p.hand.indexOf(cards[k]), 1);
@@ -222,10 +233,19 @@
     if (this.phase !== 'act') return { ok: false, reason: 'Ambil kartu dulu.' };
     var p = this.currentPlayer();
     if (p.hand.indexOf(card) === -1) return { ok: false, reason: 'Kartu tidak di tangan.' };
-    if (card.joker) return { ok: false, reason: 'Joker tidak boleh dibuang.' };
     // Aturan: kartu yang diambil dari buangan wajib diturunkan sebagai meld dulu.
     if (this.mustMeldCard) {
       return { ok: false, reason: 'Turunkan dulu meld yang memuat ' + Deck.cardLabel(this.mustMeldCard) + ' (kartu dari buangan).' };
+    }
+    if (card.joker) {
+      var hasNonJoker = p.hand.some(function (c) { return !c.joker; });
+      if (hasNonJoker) return { ok: false, reason: 'Joker tidak boleh dibuang.' };
+      // Terpaksa (hanya joker tersisa): aturan asli — membuang joker mengakhiri sesi.
+      p.hand.splice(p.hand.indexOf(card), 1);
+      this.discard.push(card);
+      this._log(p.name + ' terpaksa membuang joker — sesi berakhir.');
+      this._scoreSession(null, 0);
+      return { ok: true, jokerEnded: true };
     }
     p.hand.splice(p.hand.indexOf(card), 1);
     this.discard.push(card);
