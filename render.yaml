@@ -1,0 +1,15 @@
+# Render Blueprint untuk server Ceki (Colyseus).
+# Deploy: render.com → New → Blueprint → hubungkan repo → pilih branch → Apply.
+services:
+  - type: web
+    name: ceki-server
+    runtime: node
+    plan: free
+    rootDir: server          # perintah dijalankan dari server/, tetapi seluruh repo di-checkout (server butuh ../js)
+    buildCommand: npm install
+    startCommand: npm start   # node index.js (membaca PORT dari env)
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
