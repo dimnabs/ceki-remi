@@ -8,7 +8,12 @@
 (function () {
   'use strict';
 
-  var SERVER = window.CEKI_SERVER || ('ws://' + (location.hostname || 'localhost') + ':2567');
+  // URL server bisa di-override lewat ?server= (praktis untuk self-host / tunnel
+  // yang URL-nya berubah), lalu window.CEKI_SERVER, lalu default lokal.
+  var _params = new URLSearchParams(location.search);
+  var SERVER = _params.get('server') || window.CEKI_SERVER ||
+    ('ws://' + (location.hostname || 'localhost') + ':2567');
+  var PREFILL_CODE = (_params.get('room') || '').toUpperCase();
   var $ = function (id) { return document.getElementById(id); };
 
   var client = null, room = null;
@@ -240,6 +245,7 @@
       wireLobby();
       showEntry();
       setStatus('lobby-status', '');
+      if (PREFILL_CODE && $('lobby-code')) $('lobby-code').value = PREFILL_CODE;
       $('lobby-modal').classList.remove('hidden');
     },
     leave: function () {
