@@ -13,6 +13,7 @@
   var selected = {};   // id kartu terpilih di tangan
   var busy = false;    // true saat bot bermain / animasi
   var drewThisTurn = false;
+  var online = null;   // saat mode online: { send(type, payload) }. null = mode lokal.
 
   // ---------- Pembuatan elemen kartu ----------
   function cardEl(card, opts) {
@@ -244,7 +245,8 @@
   function clearSelection() { selected = {}; }
 
   function onDrawDeck() {
-    if (busy || game.current !== 0 || game.phase !== 'draw') return;
+    if (busy || !game || game.current !== 0 || game.phase !== 'draw') return;
+    if (online) { online.send('drawDeck'); return; }
     game.drawFromDeck();
     drewThisTurn = true;
     clearSelection();
@@ -254,23 +256,27 @@
     onTakeDiscardDepth(1); // tombol = ambil kartu teratas
   }
   function onTakeDiscardDepth(depth) {
-    if (busy || game.current !== 0 || game.phase !== 'draw') return;
+    if (busy || !game || game.current !== 0 || game.phase !== 'draw') return;
+    if (online) { online.send('takeDiscard', { depth: depth }); return; }
     var r = game.takeDiscard(depth);
     if (r.ok) { drewThisTurn = true; clearSelection(); render(); }
     else flashHint(r.reason);
   }
   function onLay() {
-    if (busy || game.current !== 0 || game.phase !== 'act') return;
+    if (busy || !game || game.current !== 0 || game.phase !== 'act') return;
     var sel = selectedCards();
+    if (sel.length < 3) return;
+    if (online) { online.send('layMeld', { cardIds: sel.map(function (c) { return c.id; }) }); clearSelection(); return; }
     var r = game.layMeld(sel);
     if (!r.ok) { flashHint(r.reason); return; }
     clearSelection();
     render();
   }
   function onDiscard() {
-    if (busy || game.current !== 0 || game.phase !== 'act') return;
+    if (busy || !game || game.current !== 0 || game.phase !== 'act') return;
     var sel = selectedCards();
     if (sel.length !== 1) return;
+    if (online) { online.send('discard', { cardId: sel[0].id }); clearSelection(); return; }
     var r = game.discardCard(sel[0]);
     if (!r.ok) { flashHint(r.reason); return; }
     clearSelection();
@@ -369,7 +375,12 @@
 
   function onModalBtn() {
     $('modal').classList.add('hidden');
-    if (game.gameOver) { showSetup(); return; }
+    if (online) {
+      // Sesi berikutnya di-advance otomatis oleh server; "Main Lagi" -> playAgain.
+      if (game && game.gameOver) online.send('playAgain');
+      return;
+    }
+    if (game.gameOver) { showModeSelect(); return; }
     var starter = game.nextSessionStarter();
     game.startSession(starter);
     clearSelection();
@@ -381,6 +392,7 @@
   var chosenTarget = 500;
 
   function newGame(targetScore) {
+    online = null; // mode lokal
     game = new Game(['Kamu', 'Bot Ani', 'Bot Budi', 'Bot Citra'],
       { targetScore: targetScore || chosenTarget });
     game.startSession(0);
@@ -390,9 +402,20 @@
     if (game.current !== 0) runBots();
   }
 
-  function showSetup() {
-    $('modal').classList.add('hidden');
-    $('setup-modal').classList.remove('hidden');
+  function hideAllModals() {
+    ['modal', 'setup-modal', 'mode-modal', 'lobby-modal', 'rules-modal'].forEach(function (id) {
+      var el = $(id); if (el) el.classList.add('hidden');
+    });
+  }
+  function showSetup() { hideAllModals(); $('setup-modal').classList.remove('hidden'); }
+  function showModeSelect() {
+    hideAllModals();
+    $('mode-modal').classList.remove('hidden');
+  }
+  function leaveToMenu() {
+    if (online && window.Net && window.Net.leave) window.Net.leave();
+    online = null; game = null; busy = false; clearSelection();
+    showModeSelect();
   }
 
   function markTargetPreset(value) {
@@ -433,7 +456,7 @@
     $('btn-discard').addEventListener('click', onDiscard);
     $('modal-btn').addEventListener('click', onModalBtn);
     $('btn-restart').addEventListener('click', function () {
-      $('modal').classList.add('hidden'); showSetup();
+      $('modal').classList.add('hidden'); leaveToMenu();
     });
     $('deck-pile').addEventListener('click', onDrawDeck);
     $('discard-pile').addEventListener('click', onTakeDiscard);
@@ -446,9 +469,35 @@
     $('rules-close').addEventListener('click', function () { $('rules-modal').classList.add('hidden'); });
   }
 
+  function bindMode() {
+    var local = $('mode-local'), onlineBtn = $('mode-online');
+    if (local) local.addEventListener('click', showSetup);
+    if (onlineBtn) onlineBtn.addEventListener('click', function () {
+      if (window.Net && window.Net.showLobby) { hideAllModals(); window.Net.showLobby(); }
+      else flashHint('Modul online tak termuat.');
+    });
+  }
+
+  // Antarmuka yang dipakai net.js (mode online).
+  window.CekiUI = {
+    render: render,
+    showResult: showResult,
+    flashHint: flashHint,
+    clearSelection: clearSelection,
+    hideAllModals: hideAllModals,
+    showModeSelect: showModeSelect,
+    setGame: function (g) { game = g; },
+    getGame: function () { return game; },
+    setBusy: function (b) { busy = !!b; },
+    setOnline: function (o) { online = o; },     // { send(type, payload) } atau null
+    cardEl: cardEl,
+    $: $
+  };
+
   window.addEventListener('DOMContentLoaded', function () {
     bindEvents();
     bindSetup();
-    // Setup modal tampil sejak awal (tidak hidden di HTML); tunggu pemain memilih.
+    bindMode();
+    showModeSelect(); // layar awal: pilih Lokal / Online
   });
 })();

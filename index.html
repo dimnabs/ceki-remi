@@ -69,10 +69,63 @@
     </div>
   </div>
 
-  <!-- Modal setup awal: pilih target skor -->
-  <div class="modal-overlay" id="setup-modal">
+  <!-- Modal pilih mode -->
+  <div class="modal-overlay hidden" id="mode-modal">
     <div class="modal">
       <h2>♠♥ Ceki — Remi 7 Kartu</h2>
+      <p>Pilih cara bermain:</p>
+      <div class="mode-options">
+        <button id="mode-local" class="act-btn primary" type="button">🤖 Main Lokal<small>lawan 3 bot</small></button>
+        <button id="mode-online" class="act-btn" type="button">🌐 Main Online<small>vs teman (2–4)</small></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal lobby (mode online) -->
+  <div class="modal-overlay hidden" id="lobby-modal">
+    <div class="modal lobby">
+      <h2>🌐 Main Online</h2>
+      <!-- Bagian masuk: nama + buat/gabung -->
+      <div id="lobby-entry">
+        <label class="lobby-field">Nickname
+          <input id="lobby-nick" type="text" maxlength="16" placeholder="Nama kamu">
+        </label>
+        <div class="lobby-actions">
+          <button id="lobby-create" class="act-btn primary" type="button">Buat Room</button>
+        </div>
+        <div class="lobby-join">
+          <input id="lobby-code" type="text" maxlength="4" placeholder="KODE" autocomplete="off">
+          <button id="lobby-join-btn" class="act-btn" type="button">Gabung</button>
+        </div>
+        <p class="lobby-status" id="lobby-status"></p>
+        <button id="lobby-back" class="ghost-btn" type="button">← Kembali</button>
+      </div>
+      <!-- Bagian room: kode + kursi + kontrol host -->
+      <div id="lobby-room" class="hidden">
+        <p class="lobby-code-line">Kode room: <span id="lobby-room-code" class="lobby-code"></span>
+          <button id="lobby-copy" class="ghost-btn" type="button">Salin</button></p>
+        <div id="lobby-seats" class="lobby-seats"></div>
+        <div id="lobby-host-controls" class="lobby-host">
+          <label class="lobby-field inline">Target
+            <select id="lobby-target">
+              <option value="300">300</option>
+              <option value="500" selected>500</option>
+              <option value="1000">1000</option>
+            </select>
+          </label>
+          <button id="lobby-addbot" class="act-btn" type="button">+ Bot</button>
+          <button id="lobby-start" class="act-btn primary" type="button">Mulai</button>
+        </div>
+        <p class="lobby-status" id="lobby-room-status">Menunggu pemain…</p>
+        <button id="lobby-leave" class="ghost-btn" type="button">← Keluar room</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal setup awal: pilih target skor (mode lokal) -->
+  <div class="modal-overlay hidden" id="setup-modal">
+    <div class="modal">
+      <h2>♠♥ Ceki — Main Lokal</h2>
       <p>Pilih target skor untuk memenangkan permainan:</p>
       <div class="target-options" id="target-options">
         <button type="button" data-target="300">300</button>
@@ -114,10 +167,18 @@
     </div>
   </div>
 
+  <script>
+    // MODE ONLINE (produksi): set ke URL server Colyseus setelah deploy ke Render.
+    // Contoh: window.CEKI_SERVER = 'wss://ceki-server.onrender.com';
+    // Bila kosong, mode online memakai ws://<host>:2567 (untuk pengembangan lokal).
+    // window.CEKI_SERVER = '';
+  </script>
+  <script src="js/vendor/colyseus.js"></script>
   <script src="js/deck.js"></script>
   <script src="js/melds.js"></script>
   <script src="js/game.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/net.js"></script>
 </body>
 </html>
