@@ -59,8 +59,15 @@ berakhir menjadi **poin minus**.
 
 ### Joker
 
-Menggantikan kartu apa pun. **Tidak boleh** dipakai untuk meld pertamamu,
-**tidak boleh** dibuang, dan bila tersisa di tangan saat sesi berakhir → **−500**.
+Menggantikan kartu apa pun. **Tidak boleh** dipakai untuk meld pertamamu.
+Membuang joker **mengakhiri sesi** (hanya terjadi bila terpaksa — cuma joker
+tersisa di tangan). Bila tersisa di tangan saat sesi berakhir → **−500**.
+
+### Wajib buang tiap giliran
+
+Setiap giliran harus diakhiri dengan membuang 1 kartu, jadi kamu **tidak boleh
+menurunkan seluruh kartu tangan** — selalu sisakan minimal 1 kartu untuk
+dibuang. (Menurunkan kartu terakhir ditolak; bot pun mematuhi ini.)
 
 ### Tutup tangan (menang sesi)
 

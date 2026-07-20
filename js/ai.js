@@ -132,25 +132,28 @@
       }
     }
 
-    // Pastikan tersisa >= 1 kartu non-joker untuk dibuang.
-    // hand = sisa yang TIDAK diturunkan.
-    var nonJokerLeft = hand.filter(function (c) { return !c.joker; }).length;
-    if (nonJokerLeft === 0 && planned.length > 0) {
-      // Kembalikan satu kartu non-joker dari meld terakhir agar bisa dibuang.
-      for (var i = planned.length - 1; i >= 0 && nonJokerLeft === 0; i--) {
-        var grp = planned[i];
-        if (must && grp.indexOf(must) !== -1) continue; // jangan bongkar meld wajib
-        var cand = grp.filter(function (c) { return !c.joker; });
-        if (cand.length > 0) {
-          // Buang kartu bernilai terkecil dari meld agar kerugian minimal.
-          cand.sort(function (a, b) { return a.value - b.value; });
-          var give = cand[0];
-          var gi = grp.indexOf(give);
-          grp.splice(gi, 1);
-          if (grp.length < 3) planned.splice(i, 1); // meld pecah -> batalkan
-          nonJokerLeft = 1;
+    // Pastikan tersisa >= 1 kartu NON-JOKER untuk dibuang (tiap giliran wajib buang).
+    // `hand` di sini = sisa kartu yang TIDAK diturunkan.
+    var hasDiscardable = hand.some(function (c) { return !c.joker; });
+    for (var i = planned.length - 1; i >= 0 && !hasDiscardable; i--) {
+      var grp = planned[i];
+      var isMustMeld = !!(must && grp.indexOf(must) !== -1);
+      // Coba keluarkan satu kartu non-joker (bukan kartu wajib) sambil MENJAGA meld tetap valid.
+      var cand = grp.filter(function (c) { return !c.joker && c !== must; })
+                    .sort(function (a, b) { return a.value - b.value; });
+      var freed = false;
+      for (var ci = 0; ci < cand.length; ci++) {
+        var victim = cand[ci];
+        var rest = grp.filter(function (c) { return c !== victim; });
+        if (rest.length >= 3 && Melds.isValidMeld(rest)) {
+          planned[i] = rest; // meld menyusut tapi tetap valid; kartu keluar -> bisa dibuang
+          freed = true;
+          break;
         }
       }
+      if (freed) { hasDiscardable = true; break; }
+      // Tak bisa menyusut sambil tetap valid: batalkan meld (kecuali meld wajib).
+      if (!isMustMeld) { planned.splice(i, 1); hasDiscardable = true; }
     }
     return planned;
   }
@@ -179,7 +182,8 @@
   function decideDiscard(game) {
     var p = game.currentPlayer();
     var nonJoker = p.hand.filter(function (c) { return !c.joker; });
-    if (nonJoker.length === 0) return null; // hanya joker (semestinya tak terjadi)
+    // Terpaksa hanya joker tersisa: buang joker (aturan: sesi berakhir).
+    if (nonJoker.length === 0) return p.hand.length ? p.hand[0] : null;
 
     var fb = Melds.findBestMelds(p.hand, { allowJoker: p.hasLaidMeld });
     var deadwood = fb.deadwood.filter(function (c) { return !c.joker; });
