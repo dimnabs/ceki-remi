@@ -27,19 +27,23 @@ Setiap pemain mendapat **7 kartu**. Pada giliranmu:
 
 1. **Ambil** kartu — dari **Deck**, atau dari **Buangan**. Dari buangan kamu
    boleh mengambil kartu yang diinginkan (maksimal **7 kartu** dari atas)
-   **beserta semua kartu di atasnya**, dengan syarat kamu punya **≥2 kartu di
-   tangan** yang bisa membentuk meld dengan kartu itu. Klik kartu di kipas
-   buangan untuk mengambil dari sana; kartu yang belum memenuhi syarat tampak
-   redup.
+   **beserta semua kartu di atasnya**. Syaratnya: kartu itu **wajib langsung
+   kamu turunkan sebagai bagian meld** pada giliran itu (tak boleh sekadar
+   ambil lalu buang). Klik kartu di kipas buangan untuk mengambil dari sana;
+   kartu yang belum memenuhi syarat tampak redup. Kartu wajib ditandai
+   label **"wajib"** di tanganmu, dan tombol *Buang* terkunci sampai ia turun.
 2. **Turunkan meld** (opsional) — pilih 3+ kartu di tanganmu lalu tekan
    *Turunkan Meld*.
 3. **Buang** satu kartu untuk mengakhiri giliran (pilih 1 kartu → *Buang Kartu*).
 
 ### Kombinasi "jadi" (minimal 3 kartu)
 
-- **Set** — rank sama, simbol berbeda: `8♠ 8♥ 8♦`.
-- **Seri** — berurutan, simbol sama: `4♣ 5♣ 6♣`. Deret melingkar diperbolehkan:
-  `K♠ A♠ 2♠` dan `A♠ 2♠ 3♠` valid.
+- **Seri** — berurutan, simbol sama, dalam **satu blok**: `2–10`
+  (mis. `4♣ 5♣ 6♣`) atau `J-Q-K`. **Tidak melingkar** dan **As tidak masuk
+  seri** (`Q-K-A`, `K-A-2`, `10-J-Q` tidak valid).
+- **Set** — rank sama, simbol berbeda: `8♠ 8♥ 8♦`. Hanya boleh diturunkan
+  **setelah kamu punya minimal satu seri yang turun** — jadi meld pertamamu
+  wajib berupa seri.
 
 ### Nilai kartu
 
@@ -78,10 +82,14 @@ dimainkan — permainan ini memang biasa dimainkan lama.
 Sesuai makalah IF2211 ITB, tiap bot memilih aksi yang memaksimalkan poin lokal
 ("take what you can get now"):
 
-- **Ambil**: mengambil kartu buangan hanya bila menaikkan potensi poin meld,
-  selain itu mengambil dari deck.
-- **Turunkan**: menurunkan meld sebanyak mungkin (meld pertama tanpa joker).
-- **Buang**: membuang kartu non-joker bernilai terbesar yang tidak berpotensi jadi.
+- **Ambil**: mengambil dari buangan (kedalaman 1–7, *deadwood-aware*) hanya
+  bila menaikkan nilai tangan dan kartunya bisa langsung dijadikan meld yang
+  sah; selain itu mengambil dari deck.
+- **Turunkan**: menurunkan meld sebanyak mungkin — **seri lebih dulu** (set
+  baru menyusul), meld pertama tanpa joker, dan kartu wajib dari buangan
+  diturunkan lebih dulu.
+- **Buang**: membuang kartu paling tak berpotensi (mempertahankan kartu yang
+  bisa menjadi seri/set), bernilai terbesar bila seri.
 
 ## Struktur Proyek
 

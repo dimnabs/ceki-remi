@@ -93,22 +93,22 @@
     <div class="modal rules">
       <h2>Aturan Singkat</h2>
       <div class="rules-body">
-        <p><strong>Tujuan:</strong> kumpulkan poin terbanyak. Pemenang = pemain pertama yang total skornya mencapai <strong>500</strong> (aturan rumah; makalah aslinya 1000).</p>
+        <p><strong>Tujuan:</strong> kumpulkan poin terbanyak. Pemenang = pemain pertama yang total skornya mencapai <strong>target</strong> yang dipilih di awal.</p>
         <p><strong>Giliranmu:</strong></p>
         <ol>
-          <li><strong>Ambil</strong> 1 kartu — dari <em>Deck</em> atau <em>Buangan</em>.</li>
-          <li><strong>Turunkan</strong> kombinasi "jadi" (opsional): pilih kartu lalu tekan <em>Turunkan Meld</em>.</li>
+          <li><strong>Ambil</strong> kartu — dari <em>Deck</em>, atau dari <em>Buangan</em>. Dari buangan kamu boleh mengambil kartu yang diinginkan (maks. 7 dari atas) beserta semua kartu di atasnya — syaratnya kartu itu <strong>wajib langsung kamu turunkan sebagai meld</strong> pada giliran ini.</li>
+          <li><strong>Turunkan</strong> kombinasi "jadi": pilih kartu lalu tekan <em>Turunkan Meld</em>.</li>
           <li><strong>Buang</strong> 1 kartu untuk mengakhiri giliran.</li>
         </ol>
         <p><strong>Kombinasi (min. 3 kartu):</strong></p>
         <ul>
-          <li><strong>Set</strong> — rank sama, simbol beda (mis. 8♠ 8♥ 8♦).</li>
-          <li><strong>Seri</strong> — berurutan, simbol sama (mis. 4♣ 5♣ 6♣). Melingkar K-A-2 boleh.</li>
+          <li><strong>Seri</strong> — berurutan, simbol sama, dalam satu blok: <em>2–10</em> (mis. 4♣ 5♣ 6♣) atau <em>J-Q-K</em>. Tidak melingkar; As tidak masuk seri.</li>
+          <li><strong>Set</strong> — rank sama, simbol beda (mis. 8♠ 8♥ 8♦). <strong>Hanya boleh diturunkan setelah kamu punya minimal satu seri yang turun</strong> (jadi meld pertamamu harus seri).</li>
         </ul>
         <p><strong>Nilai:</strong> 2–10 = 5 · J/Q/K = 10 · As = 15. Kartu jadi → plus, sisa di tangan → minus.</p>
         <p><strong>Joker:</strong> pengganti kartu apa pun. Tak boleh untuk meld pertamamu, tak boleh dibuang, dan bila tersisa di tangan saat sesi berakhir → <strong>−500</strong>.</p>
         <p><strong>Tutup tangan:</strong> habiskan seluruh kartu (semua jadi, sisa satu dibuang) → bonus <strong>+250</strong> (atau +500 bila memakai joker).</p>
-        <p><strong>Akhir sesi:</strong> saat ada yang tutup tangan. Bila deck habis, tumpukan buangan dikocok ulang jadi deck baru (maksimal 2×); setelah itu sesi berakhir dan skor dihitung.</p>
+        <p><strong>Akhir sesi:</strong> saat ada yang tutup tangan, atau saat deck habis — lalu skor dihitung. Skor diakumulasi antar-sesi.</p>
       </div>
       <button id="rules-close" class="act-btn primary" type="button">Mengerti</button>
     </div>

@@ -3,7 +3,11 @@
  *
  *   - Set  : >= 3 kartu dengan rank sama (mis. 4-4-4, J-J-J-J).
  *   - Seri : >= 3 kartu berurutan dengan simbol sama (mis. 4H-5H-6H).
- *            Deret melingkar diperbolehkan: K-A-2 dan A-2-3 valid.
+ *            TIDAK melingkar. Seri hanya boleh dalam SATU blok:
+ *              * blok angka  : 2..10  (mis. 2-3-4 s/d 8-9-10)
+ *              * blok gambar : J-Q-K
+ *            As TIDAK bisa masuk seri (hanya untuk set). Lintas-blok seperti
+ *            10-J-Q atau Q-K-A tidak valid.
  *   - Joker : kartu liar, menggantikan kartu apa pun.
  */
 (function (global) {
@@ -37,37 +41,46 @@
     return true;
   }
 
-  // Apakah sekelompok kartu membentuk SERI (run) yang valid? (melingkar 13)
-  function isRun(cards) {
-    if (cards.length < 3 || cards.length > 13) return false;
+  // runPos: A=1, 2..10, J=11, Q=12, K=13.
+  // Blok seri yang sah: angka [2..10] dan gambar [11..13] (J-Q-K). Tanpa wrap.
+  // Mengembalikan array posisi jendela seri bila valid, atau null.
+  function _runWindow(cards) {
+    if (cards.length < 3) return null;
     var sj = splitJokers(cards);
-    if (sj.reals.length === 0) return false;
+    if (sj.reals.length === 0) return null;
     var suit = sj.reals[0].suit;
     var positions = [];
     for (var i = 0; i < sj.reals.length; i++) {
-      if (sj.reals[i].suit !== suit) return false;
+      if (sj.reals[i].suit !== suit) return null;
       positions.push(sj.reals[i].runPos);
     }
     // Posisi asli harus unik.
     var seen = {};
     for (var p = 0; p < positions.length; p++) {
-      if (seen[positions[p]]) return false;
+      if (seen[positions[p]]) return null;
       seen[positions[p]] = true;
     }
     var n = cards.length;
-    // Coba setiap titik awal jendela sepanjang n pada lingkaran 13.
-    for (var start = 1; start <= 13; start++) {
-      var window = {};
-      for (var off = 0; off < n; off++) {
-        window[((start - 1 + off) % 13) + 1] = true;
-      }
+    // Kandidat titik awal: seluruh jendela harus muat dalam satu blok.
+    var starts = [];
+    for (var s = 2; s + n - 1 <= 10; s++) starts.push(s);   // blok angka 2..10
+    for (var s2 = 11; s2 + n - 1 <= 13; s2++) starts.push(s2); // blok gambar J-Q-K
+    for (var k = 0; k < starts.length; k++) {
+      var start = starts[k];
+      var win = {}, arr = [];
+      for (var off = 0; off < n; off++) { win[start + off] = true; arr.push(start + off); }
       var ok = true;
       for (var q = 0; q < positions.length; q++) {
-        if (!window[positions[q]]) { ok = false; break; }
+        if (!win[positions[q]]) { ok = false; break; }
       }
-      if (ok) return true;
+      if (ok) return arr;
     }
-    return false;
+    return null;
+  }
+
+  // Apakah sekelompok kartu membentuk SERI (run) yang valid?
+  function isRun(cards) {
+    return _runWindow(cards) !== null;
   }
 
   function isValidMeld(cards) {
@@ -99,28 +112,15 @@
     }
 
     // type === 'run' : cari posisi kosong yang ditambal joker.
-    var n = cards.length;
-    var positions = sj.reals.map(function (c) { return c.runPos; });
-    for (var start = 1; start <= 13; start++) {
-      var window = [];
-      var wset = {};
-      for (var off = 0; off < n; off++) {
-        var pos = ((start - 1 + off) % 13) + 1;
-        window.push(pos); wset[pos] = true;
-      }
-      var fits = positions.every(function (p) { return wset[p]; });
-      if (!fits) continue;
-      var used = {};
-      positions.forEach(function (p) { used[p] = true; });
-      var jsum = 0;
-      for (var w = 0; w < window.length; w++) {
-        if (!used[window[w]]) {
-          jsum += Deck.rankValue(Deck.RANKS[window[w] - 1]);
-        }
-      }
-      return total + jsum;
+    var window = _runWindow(cards);
+    if (!window) return total;
+    var used = {};
+    sj.reals.forEach(function (c) { used[c.runPos] = true; });
+    var jsum = 0;
+    for (var w = 0; w < window.length; w++) {
+      if (!used[window[w]]) jsum += Deck.rankValue(Deck.RANKS[window[w] - 1]);
     }
-    return total;
+    return total + jsum;
   }
 
   /*
